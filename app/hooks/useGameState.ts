@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, generateId, clamp, getRandomPatientName, getRandomHumanEmoji } from '../gameData';
+import { GameState, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, getCurrentGameTime, getCurrentDay, isBusinessHours } from '../gameData';
 
 // Initial game state
 const initialState: GameState = {
@@ -13,6 +13,8 @@ const initialState: GameState = {
   
   // Game Progress
   day: 1,
+  gameStartDate: new Date(),
+  currentGameTime: 0,
   isRunning: true, // Auto-start the game
   
   // Clinic Resources
@@ -186,20 +188,50 @@ export function useGameState() {
   const gameTick = useCallback(() => {
     if (!gameState.isRunning) return;
 
-    // Spawn new patients (30% chance per second)
-    if (Math.random() < GAME_CONFIG.BASE_ARRIVAL_RATE) {
+    // Update game time and day progression
+    setGameState(prev => {
+      const newGameTime = getCurrentGameTime(prev.gameStartDate);
+      const newDay = getCurrentDay(newGameTime);
+      
+      // Check if we've moved to a new day
+      const dayChanged = newDay !== prev.day;
+      
+      if (dayChanged) {
+        // Process end of day: pay daily costs
+        const dailyCosts = GAME_CONFIG.DAILY_RENT + 
+                          (GAME_CONFIG.DAILY_SALARIES * prev.dentists) + 
+                          GAME_CONFIG.DAILY_UTILITIES;
+        
+        return {
+          ...prev,
+          day: newDay,
+          currentGameTime: newGameTime,
+          cash: Math.max(0, prev.cash - dailyCosts), // Can't go below 0
+          logs: [`Day ${newDay} started! Daily costs: ${dailyCosts}`, ...prev.logs.slice(0, 7)],
+        };
+      }
+
+      return {
+        ...prev,
+        currentGameTime: newGameTime,
+      };
+    });
+
+    // Only spawn patients during business hours
+    const currentGameTime = getCurrentGameTime(gameState.gameStartDate);
+    if (isBusinessHours(currentGameTime) && Math.random() < GAME_CONFIG.BASE_ARRIVAL_RATE) {
       spawnPatient();
     }
 
-    // Auto-assign patients to chairs
+    // Auto-assign patients to chairs (always available)
     autoAssignPatients();
 
-    // Update treatment progress
+    // Update treatment progress (always available)
     updateTreatments();
 
-    // Remove impatient patients
+    // Remove impatient patients (always available)
     removeImpatientPatients();
-  }, [gameState.isRunning, spawnPatient, autoAssignPatients, updateTreatments, removeImpatientPatients]);
+  }, [gameState.isRunning, gameState.gameStartDate, spawnPatient, autoAssignPatients, updateTreatments, removeImpatientPatients]);
 
   // Game loop
   useEffect(() => {
@@ -262,7 +294,10 @@ export function useGameState() {
 
   // Reset game
   const resetGame = useCallback(() => {
-    setGameState(initialState);
+    setGameState({
+      ...initialState,
+      gameStartDate: new Date(), // Reset to current date
+    });
   }, []);
 
   return {

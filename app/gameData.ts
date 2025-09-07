@@ -11,6 +11,8 @@ export interface GameState {
   
   // Game Progress
   day: number;
+  gameStartDate: Date;
+  currentGameTime: number; // seconds since game started
   isRunning: boolean;
   
   // Clinic Resources
@@ -65,9 +67,12 @@ export interface Treatment {
 
 // === GAME CONSTANTS ===
 export const GAME_CONFIG = {
-  // Game Timing
+  // Game Timing (Realistic clinic operations)
   TICK_INTERVAL: 1000, // 1 second
-  DAY_DURATION: 60, // 60 seconds = 1 day
+  DAY_DURATION: 60, // 60 seconds = 1 business day
+  BUSINESS_HOURS_START: 9, // 9 AM
+  BUSINESS_HOURS_END: 17, // 5 PM
+  
   
   // Starting Values
   STARTING_CASH: 300, // Reduced starting cash for more challenge
@@ -78,8 +83,8 @@ export const GAME_CONFIG = {
   STARTING_DENTISTS: 1,
   STARTING_ASSISTANTS: 0,
   
-  // Patient Arrival (More realistic business flow)
-  BASE_ARRIVAL_RATE: 0.15, // 15% chance per second (slower arrival)
+  // Patient Arrival (Balanced for gameplay)
+  BASE_ARRIVAL_RATE: 0.2, // 20% chance per second during business hours
   
   // Daily Costs (More realistic business expenses)
   DAILY_RENT: 80, // Higher rent
@@ -105,41 +110,41 @@ export const PATIENT_TYPES = {
   checkup: {
     name: 'Checkup',
     emoji: '🪥',
-    treatmentTime: 8, // Faster treatment
+    treatmentTime: 4, // 4 seconds - quick and smooth
     revenue: 80,
-    patience: 20, // Less patience - faster game
+    patience: 12, // 12 seconds patience (3x treatment time)
     hygieneCost: 3,
   },
   scaling: {
     name: 'Scaling',
     emoji: '🫧',
-    treatmentTime: 12, // Faster treatment
+    treatmentTime: 5, // 5 seconds
     revenue: 150,
-    patience: 25, // Less patience
+    patience: 15, // 15 seconds patience (3x treatment time)
     hygieneCost: 5,
   },
   filling: {
     name: 'Filling',
     emoji: '🧱',
-    treatmentTime: 15, // Faster treatment
+    treatmentTime: 6, // 6 seconds
     revenue: 220,
-    patience: 30, // Less patience
+    patience: 18, // 18 seconds patience (3x treatment time)
     hygieneCost: 7,
   },
   whitening: {
     name: 'Whitening',
     emoji: '✨',
-    treatmentTime: 18, // Faster treatment
+    treatmentTime: 7, // 7 seconds
     revenue: 300,
-    patience: 35, // Less patience
+    patience: 21, // 21 seconds patience (3x treatment time)
     hygieneCost: 8,
   },
   braces: {
     name: 'Braces Consult',
     emoji: '😬',
-    treatmentTime: 12, // Faster treatment
+    treatmentTime: 5, // 5 seconds
     revenue: 180,
-    patience: 25, // Less patience
+    patience: 15, // 15 seconds patience (3x treatment time)
     hygieneCost: 4,
   },
 } as const;
@@ -231,4 +236,30 @@ export function getPatientEmotion(patiencePercent: number): string {
 
 export function getRandomHumanEmoji(): string {
   return HUMAN_EMOJIS[Math.floor(Math.random() * HUMAN_EMOJIS.length)];
+}
+
+// === DATE AND TIME UTILITIES ===
+export function getCurrentGameTime(gameStartDate: Date): number {
+  return Math.floor((Date.now() - gameStartDate.getTime()) / 1000);
+}
+
+export function getCurrentDay(gameTime: number): number {
+  return Math.floor(gameTime / GAME_CONFIG.DAY_DURATION) + 1;
+}
+
+export function getCurrentBusinessHour(gameTime: number): number {
+  const dayProgress = (gameTime % GAME_CONFIG.DAY_DURATION) / GAME_CONFIG.DAY_DURATION;
+  return GAME_CONFIG.BUSINESS_HOURS_START + (dayProgress * (GAME_CONFIG.BUSINESS_HOURS_END - GAME_CONFIG.BUSINESS_HOURS_START));
+}
+
+export function isBusinessHours(gameTime: number): boolean {
+  const currentHour = getCurrentBusinessHour(gameTime);
+  return currentHour >= GAME_CONFIG.BUSINESS_HOURS_START && currentHour < GAME_CONFIG.BUSINESS_HOURS_END;
+}
+
+export function formatGameTime(gameTime: number): string {
+  const day = getCurrentDay(gameTime);
+  const hour = getCurrentBusinessHour(gameTime);
+  const minute = Math.floor((hour % 1) * 60);
+  return `${Math.floor(hour).toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
 }
