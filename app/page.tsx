@@ -52,6 +52,46 @@ export default function Home() {
           onTabChange={handleTabChange}
         />
 
+        {/* Game Over Screen */}
+        {gameState.isGameOver && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+              <div className="text-6xl mb-4">💸</div>
+              <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
+              <p className="text-gray-600 mb-6">
+                Your dental clinic went bankrupt on Day {gameState.day}.<br/>
+                You served {gameState.stats.patientsServed} patients and earned ${gameState.stats.totalRevenue}.
+              </p>
+              <button
+                onClick={resetGame}
+                className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Victory Screen */}
+        {gameState.isGameWon && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+              <div className="text-6xl mb-4">🎉</div>
+              <h2 className="text-2xl font-bold text-green-600 mb-4">Victory!</h2>
+              <p className="text-gray-600 mb-6">
+                Congratulations! You earned $100,000 and built a successful dental empire!<br/>
+                You served {gameState.stats.patientsServed} patients and earned ${gameState.stats.totalRevenue}.
+              </p>
+              <button
+                onClick={resetGame}
+                className="bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-lg transition-colors"
+              >
+                Play Again
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'operations' && (
@@ -66,7 +106,7 @@ export default function Home() {
           {activeTab === 'upgrades' && (
             <UpgradesTab
               cash={gameState.cash}
-              chairs={gameState.chairs}
+              upgradeLevels={gameState.upgradeLevels}
               onBuyUpgrade={handleBuyUpgrade}
             />
           )}
@@ -81,12 +121,25 @@ export default function Home() {
           {activeTab === 'stats' && (
             <StatsTab
               patientsServed={gameState.stats.patientsServed}
+              patientsLost={gameState.stats.patientsLost}
               totalRevenue={gameState.stats.totalRevenue}
+              day={gameState.day}
+              chairs={gameState.chairs}
+              dentists={gameState.dentists}
+              assistants={gameState.assistants}
+              reputation={gameState.reputation}
+              hygiene={gameState.hygiene}
             />
           )}
 
           {activeTab === 'achievements' && (
-            <AchievementsTab />
+            <AchievementsTab
+              completedAchievements={gameState.completedAchievements}
+              patientsServed={gameState.stats.patientsServed}
+              totalRevenue={gameState.stats.totalRevenue}
+              reputation={gameState.reputation}
+              upgradeLevels={gameState.upgradeLevels}
+            />
           )}
         </div>
       </div>

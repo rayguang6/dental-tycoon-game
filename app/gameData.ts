@@ -14,11 +14,22 @@ export interface GameState {
   gameStartDate: Date;
   currentGameTime: number; // seconds since game started
   isRunning: boolean;
+  isGameOver: boolean;
+  isGameWon: boolean;
   
   // Clinic Resources
   chairs: number;
   dentists: number;
   assistants: number;
+  
+  // Upgrade Levels
+  upgradeLevels: {
+    chair: number;
+    dentist: number;
+    assistant: number;
+    marketing: number;
+    cleaning: number;
+  };
   
   // Active Elements
   patients: Patient[];
@@ -34,6 +45,9 @@ export interface GameState {
   // Game Settings
   autoAssign: boolean;
   logs: string[];
+  
+  // Achievements
+  completedAchievements: string[];
 }
 
 // === PATIENT TYPES ===
@@ -110,86 +124,159 @@ export const PATIENT_TYPES = {
   checkup: {
     name: 'Checkup',
     emoji: '🪥',
-    treatmentTime: 4, // 4 seconds - quick and smooth
+    treatmentTime: 4,
     revenue: 80,
-    patience: 12, // 12 seconds patience (3x treatment time)
-    hygieneCost: 3,
+    patience: 12,
+    hygieneCost: 3
   },
   scaling: {
     name: 'Scaling',
     emoji: '🫧',
-    treatmentTime: 5, // 5 seconds
+    treatmentTime: 5,
     revenue: 150,
-    patience: 15, // 15 seconds patience (3x treatment time)
-    hygieneCost: 5,
+    patience: 15,
+    hygieneCost: 5
   },
   filling: {
     name: 'Filling',
     emoji: '🧱',
-    treatmentTime: 6, // 6 seconds
+    treatmentTime: 6,
     revenue: 220,
-    patience: 18, // 18 seconds patience (3x treatment time)
-    hygieneCost: 7,
+    patience: 18,
+    hygieneCost: 7
   },
   whitening: {
     name: 'Whitening',
     emoji: '✨',
-    treatmentTime: 7, // 7 seconds
+    treatmentTime: 7,
     revenue: 300,
-    patience: 21, // 21 seconds patience (3x treatment time)
-    hygieneCost: 8,
+    patience: 21,
+    hygieneCost: 8
   },
   braces: {
     name: 'Braces Consult',
     emoji: '😬',
-    treatmentTime: 5, // 5 seconds
+    treatmentTime: 5,
     revenue: 180,
-    patience: 15, // 15 seconds patience (3x treatment time)
-    hygieneCost: 4,
-  },
+    patience: 15,
+    hygieneCost: 4
+  }
 } as const;
 
 // === UPGRADES ===
-export interface Upgrade {
-  id: string;
-  name: string;
-  description: string;
-  baseCost: number;
-  maxLevel: number;
-  currentLevel: number;
-}
-
 export const UPGRADES = {
   chair: {
     name: 'Extra Chair',
     description: 'Add one more treatment chair',
-    baseCost: 800, // More expensive
+    baseCost: 800,
     maxLevel: 5,
+    icon: '🪑',
+    color: 'from-blue-500 to-blue-600',
+    bgColor: 'from-blue-100 to-blue-200'
   },
   dentist: {
     name: 'Extra Dentist',
     description: 'Hire another dentist for parallel treatments',
-    baseCost: 1200, // Much more expensive
+    baseCost: 1200,
     maxLevel: 4,
+    icon: '👨‍⚕️',
+    color: 'from-green-500 to-green-600',
+    bgColor: 'from-green-100 to-green-200'
   },
   assistant: {
     name: 'Dental Assistant',
     description: 'Speed up treatments by 20%',
-    baseCost: 600, // More expensive
+    baseCost: 600,
     maxLevel: 3,
+    icon: '👩‍⚕️',
+    color: 'from-purple-500 to-purple-600',
+    bgColor: 'from-purple-100 to-purple-200'
   },
   marketing: {
     name: 'Marketing Campaign',
     description: 'Increase patient arrival rate',
-    baseCost: 500, // More expensive
+    baseCost: 500,
     maxLevel: 5,
+    icon: '📢',
+    color: 'from-orange-500 to-orange-600',
+    bgColor: 'from-orange-100 to-orange-200'
   },
   cleaning: {
     name: 'Professional Cleaning',
     description: 'Improve hygiene maintenance',
-    baseCost: 400, // More expensive
+    baseCost: 400,
     maxLevel: 1,
+    icon: '🧽',
+    color: 'from-cyan-500 to-cyan-600',
+    bgColor: 'from-cyan-100 to-cyan-200'
+  }
+} as const;
+
+// === ACHIEVEMENTS ===
+export const ACHIEVEMENTS = {
+  'first-patient': {
+    title: 'First Patient',
+    description: 'Treat your first patient',
+    icon: '🎯',
+    reward: 50,
+    condition: {
+      type: 'patients_served',
+      value: 1
+    }
   },
+  'first-1000': {
+    title: 'First $1000',
+    description: 'Earn your first $1000',
+    icon: '💰',
+    reward: 100,
+    condition: {
+      type: 'total_revenue',
+      value: 1000
+    }
+  },
+  'expansion': {
+    title: 'Expansion',
+    description: 'Buy your first extra chair',
+    icon: '🪑',
+    reward: 200,
+    condition: {
+      type: 'upgrade_level',
+      upgrade: 'chair',
+      value: 2
+    }
+  },
+  'reputation-builder': {
+    title: 'Reputation Builder',
+    description: 'Reach 50 reputation points',
+    icon: '⭐',
+    reward: 300,
+    condition: {
+      type: 'reputation',
+      value: 50
+    }
+  },
+  'efficiency-expert': {
+    title: 'Efficiency Expert',
+    description: 'Hire your first dental assistant',
+    icon: '👩‍⚕️',
+    reward: 250,
+    condition: {
+      type: 'upgrade_level',
+      upgrade: 'assistant',
+      value: 1
+    }
+  },
+  'marketing-master': {
+    title: 'Marketing Master',
+    description: 'Launch your first marketing campaign',
+    icon: '📢',
+    reward: 150,
+    condition: {
+      type: 'upgrade_level',
+      upgrade: 'marketing',
+      value: 1
+    }
+  }
 } as const;
 
 // === PATIENT NAMES ===
@@ -209,6 +296,9 @@ export const PATIENT_NAMES = [
 
 // === HUMAN EMOJIS ===
 export const HUMAN_EMOJIS = ['👨', '👩', '👦', '👧', '🧑', '👨‍🦱', '👩‍🦱', '👨‍🦰', '👩‍🦰'] as const;
+
+
+
 
 // === UTILITY FUNCTIONS ===
 export function formatCurrency(amount: number): string {

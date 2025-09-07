@@ -1,48 +1,68 @@
 'use client';
 
-interface Achievement {
-  id: string;
-  title: string;
-  description: string;
-  icon: string;
-  completed: boolean;
-}
+import { ACHIEVEMENTS } from '../../gameData';
 
 interface AchievementsTabProps {
-  // Future: achievements state can be passed here
+  completedAchievements: string[];
+  patientsServed: number;
+  totalRevenue: number;
+  reputation: number;
+  upgradeLevels: {
+    chair: number;
+    dentist: number;
+    assistant: number;
+    marketing: number;
+    cleaning: number;
+  };
 }
 
-export default function AchievementsTab({}: AchievementsTabProps) {
-  const achievements: Achievement[] = [
-    {
-      id: 'first-patient',
-      title: 'First Patient',
-      description: 'Treat your first patient',
-      icon: '🎯',
-      completed: true,
-    },
-    {
-      id: 'first-1000',
-      title: 'First $1000',
-      description: 'Earn your first $1000',
-      icon: '💰',
-      completed: false,
-    },
-    {
-      id: 'expansion',
-      title: 'Expansion',
-      description: 'Buy your first extra chair',
-      icon: '🪑',
-      completed: false,
-    },
-    {
-      id: 'reputation-builder',
-      title: 'Reputation Builder',
-      description: 'Reach 50 reputation points',
-      icon: '⭐',
-      completed: false,
-    },
-  ];
+export default function AchievementsTab({ 
+  completedAchievements, 
+  patientsServed, 
+  totalRevenue, 
+  reputation, 
+  upgradeLevels 
+}: AchievementsTabProps) {
+  const achievements = Object.entries(ACHIEVEMENTS).map(([id, achievement]) => {
+    const isCompleted = completedAchievements.includes(id);
+    
+    // Calculate progress for incomplete achievements
+    let progress = 0;
+    let progressText = '';
+    
+    if (!isCompleted) {
+      switch (achievement.condition.type) {
+        case 'patients_served':
+          progress = Math.min(100, (patientsServed / achievement.condition.value) * 100);
+          progressText = `${patientsServed}/${achievement.condition.value} patients`;
+          break;
+        case 'total_revenue':
+          progress = Math.min(100, (totalRevenue / achievement.condition.value) * 100);
+          progressText = `$${totalRevenue}/$${achievement.condition.value}`;
+          break;
+        case 'reputation':
+          progress = Math.min(100, (reputation / achievement.condition.value) * 100);
+          progressText = `${reputation}/${achievement.condition.value} reputation`;
+          break;
+        case 'upgrade_level':
+          const currentLevel = upgradeLevels[achievement.condition.upgrade as keyof typeof upgradeLevels];
+          progress = Math.min(100, (currentLevel / achievement.condition.value) * 100);
+          progressText = `Level ${currentLevel}/${achievement.condition.value}`;
+          break;
+      }
+    }
+    
+    return {
+      id,
+      title: achievement.title,
+      description: achievement.description,
+      icon: achievement.icon,
+      reward: achievement.reward,
+      completed: isCompleted,
+      progress,
+      progressText,
+    };
+  });
 
   return (
     <div className="space-y-6">
@@ -53,21 +73,36 @@ export default function AchievementsTab({}: AchievementsTabProps) {
             <div
               key={achievement.id}
               className={`bg-white rounded-lg p-4 shadow-sm border-2 ${
-                achievement.completed ? 'border-yellow-200' : 'border-gray-200'
+                achievement.completed ? 'border-yellow-200 bg-yellow-50' : 'border-gray-200'
               }`}
             >
-              <div className="flex items-center gap-3 mb-2">
+              <div className="flex items-center gap-3 mb-3">
                 <div className="text-2xl">{achievement.icon}</div>
-                <div>
+                <div className="flex-1">
                   <div className="font-semibold text-gray-800">{achievement.title}</div>
                   <div className="text-sm text-gray-600">{achievement.description}</div>
                 </div>
+                <div className="text-right">
+                  <div className="text-sm font-bold text-green-600">+${achievement.reward}</div>
+                </div>
               </div>
-              <div className={`text-xs font-medium ${
-                achievement.completed ? 'text-green-600' : 'text-gray-500'
-              }`}>
-                {achievement.completed ? '✅ Completed' : '🔒 Locked'}
-              </div>
+              
+              {achievement.completed ? (
+                <div className="text-sm font-medium text-green-600 flex items-center gap-1">
+                  ✅ Completed
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <div className="text-xs text-gray-500">{achievement.progressText}</div>
+                  <div className="w-full bg-gray-200 rounded-full h-2">
+                    <div 
+                      className="bg-blue-500 h-2 rounded-full transition-all duration-300" 
+                      style={{ width: `${achievement.progress}%` }}
+                    ></div>
+                  </div>
+                  <div className="text-xs text-gray-500">🔒 In Progress</div>
+                </div>
+              )}
             </div>
           ))}
         </div>
