@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, GameLog, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, EVENTS, Event, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, isBusinessHours } from '../gameData';
+import { GameState, GameLog, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, EVENTS, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, isBusinessHours } from '../gameData';
 
 // Initial game state
 const initialState: GameState = {
@@ -261,7 +261,7 @@ export function useGameState() {
       let newCash = prev.cash;
       let newReputation = prev.reputation;
       let newHygiene = prev.hygiene;
-      let newLogs = [...prev.logs];
+      const newLogs = [...prev.logs];
 
       completedTreatments.forEach(treatment => {
         newCash += treatment.revenue;
@@ -633,7 +633,7 @@ export function useGameState() {
       
       setGameState(prev => ({
         ...prev,
-        pnlPopupTimer: timer as any, // TypeScript workaround for timer ID
+        pnlPopupTimer: timer as unknown as number, // Timer ID as number
       }));
     }
   }, [gameState.showPnLPopup, gameState.pnlPopupTimer, closePnLPopup]);

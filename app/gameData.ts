@@ -424,7 +424,6 @@ export function isBusinessHours(gameTime: number): boolean {
 }
 
 export function formatGameTime(gameTime: number): string {
-  const day = getCurrentDay(gameTime);
   const hour = getCurrentBusinessHour(gameTime);
   const minute = Math.floor((hour % 1) * 60);
   return `${Math.floor(hour).toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;

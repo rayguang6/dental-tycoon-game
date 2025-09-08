@@ -34,7 +34,6 @@ export default function Home() {
         <Header
           day={gameState.day}
           currentGameTime={gameState.currentGameTime}
-          gameStartDate={gameState.gameStartDate}
           cash={gameState.cash}
           isPaused={gameState.isPaused}
           onClean={cleanClinic}
@@ -134,7 +133,6 @@ export default function Home() {
           {activeTab === 'pnl' && (
             <PNLTab
               dailyPnL={gameState.dailyPnL}
-              currentDay={gameState.day}
             />
           )}
 

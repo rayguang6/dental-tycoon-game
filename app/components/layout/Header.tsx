@@ -7,14 +7,13 @@ import DayProgress from '../game/DayProgress';
 interface HeaderProps {
   day: number;
   currentGameTime: number;
-  gameStartDate: Date;
   cash: number;
   isPaused: boolean;
   onClean: () => void;
   onReset: () => void;
 }
 
-export default function Header({ day, currentGameTime, gameStartDate, cash, isPaused, onClean, onReset }: HeaderProps) {
+export default function Header({ day, currentGameTime, cash, isPaused, onClean, onReset }: HeaderProps) {
   const [showConfig, setShowConfig] = useState(false);
 
   return (

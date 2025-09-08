@@ -18,10 +18,9 @@ interface PNLTabProps {
       eventExpenses: number;
     };
   }>;
-  currentDay: number;
 }
 
-export default function PNLTab({ dailyPnL, currentDay }: PNLTabProps) {
+export default function PNLTab({ dailyPnL }: PNLTabProps) {
   const latestPnL = dailyPnL[dailyPnL.length - 1];
   const totalRevenue = dailyPnL.reduce((sum, pnl) => sum + pnl.revenue, 0);
   const totalExpenses = dailyPnL.reduce((sum, pnl) => sum + pnl.expenses, 0);
