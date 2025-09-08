@@ -42,12 +42,43 @@ export interface GameState {
     totalRevenue: number;
   };
   
+  // P&L Tracking
+  dailyPnL: {
+    day: number;
+    revenue: number;
+    expenses: number;
+    netProfit: number;
+    breakdown: {
+      patientRevenue: number;
+      eventIncome: number;
+      rent: number;
+      salaries: number;
+      utilities: number;
+      cleaning: number;
+      eventExpenses: number;
+    };
+  }[];
+  
   // Game Settings
   autoAssign: boolean;
   logs: string[];
   
   // Achievements
   completedAchievements: string[];
+  
+  // Events
+  activeEvent: Event | null;
+  isPaused: boolean;
+  
+  // Daily P&L Tracking (reset each day)
+  dailyRevenue: number;
+  dailyExpenses: number;
+  dailyEventIncome: number;
+  dailyEventExpenses: number;
+  
+  // P&L Popup
+  showPnLPopup: boolean;
+  pnlPopupTimer: number | null;
 }
 
 // === PATIENT TYPES ===
@@ -79,11 +110,36 @@ export interface Treatment {
   startedAt: number;
 }
 
+// === EVENTS ===
+export interface Event {
+  id: string;
+  title: string;
+  description: string;
+  type: 'opportunity' | 'risk' | 'neutral';
+  emoji: string;
+  choices: readonly EventChoice[];
+}
+
+export interface EventChoice {
+  id: string;
+  text: string;
+  cost?: number; // Cost to take this choice (optional)
+  outcomes: readonly EventOutcome[];
+}
+
+export interface EventOutcome {
+  probability: number; // 0-100, chance this outcome happens
+  description: string;
+  cashChange: number; // Positive or negative cash change
+  reputationChange?: number; // Optional reputation change
+  hygieneChange?: number; // Optional hygiene change
+}
+
 // === GAME CONSTANTS ===
 export const GAME_CONFIG = {
-  // Game Timing (Realistic clinic operations)
+  // Game Timing (Faster for better gameplay)
   TICK_INTERVAL: 1000, // 1 second
-  DAY_DURATION: 60, // 60 seconds = 1 business day
+  DAY_DURATION: 20, // 20 seconds = 1 business day (balanced)
   BUSINESS_HOURS_START: 9, // 9 AM
   BUSINESS_HOURS_END: 17, // 5 PM
   
@@ -115,6 +171,9 @@ export const GAME_CONFIG = {
   MAX_ENERGY: 100,
   MAX_REPUTATION: 100,
   MIN_REPUTATION: -50,
+  
+  // Events
+  EVENT_CHANCE_PER_DAY: 0.8, // 80% chance of an event each day (more frequent!)
 } as const;
 
 // === PATIENT TYPES ===
@@ -124,41 +183,41 @@ export const PATIENT_TYPES = {
   checkup: {
     name: 'Checkup',
     emoji: '🪥',
-    treatmentTime: 4,
+    treatmentTime: 3,
     revenue: 80,
-    patience: 12,
+    patience: 8,
     hygieneCost: 3
   },
   scaling: {
     name: 'Scaling',
     emoji: '🫧',
-    treatmentTime: 5,
+    treatmentTime: 4,
     revenue: 150,
-    patience: 15,
+    patience: 10,
     hygieneCost: 5
   },
   filling: {
     name: 'Filling',
     emoji: '🧱',
-    treatmentTime: 6,
+    treatmentTime: 5,
     revenue: 220,
-    patience: 18,
+    patience: 12,
     hygieneCost: 7
   },
   whitening: {
     name: 'Whitening',
     emoji: '✨',
-    treatmentTime: 7,
+    treatmentTime: 6,
     revenue: 300,
-    patience: 21,
+    patience: 14,
     hygieneCost: 8
   },
   braces: {
     name: 'Braces Consult',
     emoji: '😬',
-    treatmentTime: 5,
+    treatmentTime: 4,
     revenue: 180,
-    patience: 15,
+    patience: 10,
     hygieneCost: 4
   }
 } as const;
@@ -296,6 +355,250 @@ export const PATIENT_NAMES = [
 
 // === HUMAN EMOJIS ===
 export const HUMAN_EMOJIS = ['👨', '👩', '👦', '👧', '🧑', '👨‍🦱', '👩‍🦱', '👨‍🦰', '👩‍🦰'] as const;
+
+// === EVENTS ===
+export const EVENTS = {
+  'marketing-opportunity': {
+    id: 'marketing-opportunity',
+    title: 'Marketing Opportunity',
+    description: 'A local newspaper wants to feature your clinic in an article about dental health. This could bring in many new patients!',
+    type: 'opportunity' as const,
+    emoji: '📰',
+    choices: [
+      {
+        id: 'invest',
+        text: 'Invest $500 in professional photos and marketing materials',
+        cost: 500,
+        outcomes: [
+          {
+            probability: 70,
+            description: 'The article is a huge success! New patients flood in.',
+            cashChange: 1500,
+            reputationChange: 10
+          },
+          {
+            probability: 30,
+            description: 'The article doesn\'t get much attention. You lose your investment.',
+            cashChange: 0
+          }
+        ]
+      },
+      {
+        id: 'decline',
+        text: 'Decline the opportunity',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'You miss out on potential new patients.',
+            cashChange: 0
+          }
+        ]
+      }
+    ]
+  },
+  'equipment-breakdown': {
+    id: 'equipment-breakdown',
+    title: 'Equipment Breakdown',
+    description: 'Your dental chair has broken down! You need to fix it immediately or lose patients.',
+    type: 'risk' as const,
+    emoji: '🔧',
+    choices: [
+      {
+        id: 'repair',
+        text: 'Pay $300 for immediate repair',
+        cost: 300,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'Equipment is fixed and working properly.',
+            cashChange: 0
+          }
+        ]
+      }
+    ]
+  },
+  'happy-customer': {
+    id: 'happy-customer',
+    title: 'Happy Customer',
+    description: 'A satisfied patient has left you a glowing review online!',
+    type: 'opportunity' as const,
+    emoji: '😊',
+    choices: [
+      {
+        id: 'thank',
+        text: 'Thank the patient and continue providing great service',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'Your reputation improves from the positive review.',
+            cashChange: 0,
+            reputationChange: 5
+          }
+        ]
+      }
+    ]
+  },
+  'power-outage': {
+    id: 'power-outage',
+    title: 'Power Outage',
+    description: 'There\'s a power outage in your area! You can\'t treat patients until it\'s fixed.',
+    type: 'risk' as const,
+    emoji: '⚡',
+    choices: [
+      {
+        id: 'wait',
+        text: 'Wait for power to be restored (lose a day of business)',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'You lose a day of revenue and some patients are frustrated.',
+            cashChange: -200,
+            reputationChange: -2
+          }
+        ]
+      },
+      {
+        id: 'generator',
+        text: 'Rent a generator for $400 to continue operations',
+        cost: 400,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'You continue operating and impress patients with your dedication.',
+            cashChange: 0,
+            reputationChange: 3
+          }
+        ]
+      }
+    ]
+  },
+  'lawsuit': {
+    id: 'lawsuit',
+    title: 'Legal Trouble',
+    description: 'A patient is threatening to sue over a treatment. You need to handle this carefully.',
+    type: 'risk' as const,
+    emoji: '⚖️',
+    choices: [
+      {
+        id: 'settle',
+        text: 'Pay $800 to settle out of court',
+        cost: 800,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'The case is settled quickly and quietly.',
+            cashChange: 0,
+            reputationChange: -1
+          }
+        ]
+      },
+      {
+        id: 'fight',
+        text: 'Fight the case in court (costs $300)',
+        cost: 300,
+        outcomes: [
+          {
+            probability: 60,
+            description: 'You win the case! Your reputation is protected.',
+            cashChange: 0,
+            reputationChange: 2
+          },
+          {
+            probability: 40,
+            description: 'You lose the case and must pay $1200 in damages.',
+            cashChange: -1200,
+            reputationChange: -5
+          }
+        ]
+      }
+    ]
+  },
+  'staff-strike': {
+    id: 'staff-strike',
+    title: 'Staff Strike',
+    description: 'Your dental assistants are demanding higher wages and threatening to strike!',
+    type: 'risk' as const,
+    emoji: '🚫',
+    choices: [
+      {
+        id: 'raise',
+        text: 'Give everyone a $50/day raise',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'Staff is happy, but your daily costs increase permanently.',
+            cashChange: 0,
+            reputationChange: 3
+          }
+        ]
+      },
+      {
+        id: 'fire',
+        text: 'Fire the strikers and hire new staff',
+        cost: 200,
+        outcomes: [
+          {
+            probability: 70,
+            description: 'New staff is hired quickly and works well.',
+            cashChange: 0,
+            reputationChange: -2
+          },
+          {
+            probability: 30,
+            description: 'It takes time to find good replacements. You lose efficiency.',
+            cashChange: 0,
+            reputationChange: -4
+          }
+        ]
+      }
+    ]
+  },
+  'insurance-deal': {
+    id: 'insurance-deal',
+    title: 'Insurance Partnership',
+    description: 'A major insurance company wants to partner with your clinic for exclusive coverage.',
+    type: 'opportunity' as const,
+    emoji: '🏥',
+    choices: [
+      {
+        id: 'accept',
+        text: 'Accept the partnership (invest $1000 in equipment)',
+        cost: 1000,
+        outcomes: [
+          {
+            probability: 80,
+            description: 'Partnership is successful! You get many new patients.',
+            cashChange: 2000,
+            reputationChange: 8
+          },
+          {
+            probability: 20,
+            description: 'Partnership falls through. You lose your investment.',
+            cashChange: 0,
+            reputationChange: -2
+          }
+        ]
+      },
+      {
+        id: 'decline',
+        text: 'Decline the partnership',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'You maintain your independence but miss out on growth.',
+            cashChange: 0,
+            reputationChange: 0
+          }
+        ]
+      }
+    ]
+  }
+} as const;
 
 
 

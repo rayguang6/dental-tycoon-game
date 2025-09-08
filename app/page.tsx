@@ -10,11 +10,13 @@ import UpgradesTab from './components/tabs/UpgradesTab';
 import PNLTab from './components/tabs/PNLTab';
 import StatsTab from './components/tabs/StatsTab';
 import AchievementsTab from './components/tabs/AchievementsTab';
+import EventPopup from './components/game/EventPopup';
+import PnLPopup from './components/game/PnLPopup';
 
 type TabType = 'operations' | 'upgrades' | 'pnl' | 'stats' | 'achievements';
 
 export default function Home() {
-  const { gameState, buyUpgrade, cleanClinic, resetGame } = useGameState();
+  const { gameState, buyUpgrade, cleanClinic, resetGame, handleEventChoice, closePnLPopup } = useGameState();
   const [activeTab, setActiveTab] = useState<TabType>('operations');
 
   const handleTabChange = (tab: TabType) => {
@@ -34,6 +36,7 @@ export default function Home() {
           currentGameTime={gameState.currentGameTime}
           gameStartDate={gameState.gameStartDate}
           cash={gameState.cash}
+          isPaused={gameState.isPaused}
           onClean={cleanClinic}
           onReset={resetGame}
         />
@@ -92,6 +95,23 @@ export default function Home() {
           </div>
         )}
 
+
+        {/* Event Popup */}
+        {gameState.activeEvent && (
+          <EventPopup
+            event={gameState.activeEvent}
+            onChoice={handleEventChoice}
+          />
+        )}
+
+        {/* P&L Popup */}
+        {gameState.showPnLPopup && gameState.dailyPnL.length > 0 && (
+          <PnLPopup
+            pnlData={gameState.dailyPnL[gameState.dailyPnL.length - 1]}
+            onClose={closePnLPopup}
+          />
+        )}
+
         {/* Tab Content */}
         <div className="space-y-6">
           {activeTab === 'operations' && (
@@ -113,8 +133,8 @@ export default function Home() {
 
           {activeTab === 'pnl' && (
             <PNLTab
-              totalRevenue={gameState.stats.totalRevenue}
-              dentists={gameState.dentists}
+              dailyPnL={gameState.dailyPnL}
+              currentDay={gameState.day}
             />
           )}
 

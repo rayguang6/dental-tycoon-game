@@ -1,18 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { formatCurrency, GAME_CONFIG, formatGameTime } from '../../gameData';
+import { formatCurrency, GAME_CONFIG } from '../../gameData';
+import DayProgress from '../game/DayProgress';
 
 interface HeaderProps {
   day: number;
   currentGameTime: number;
   gameStartDate: Date;
   cash: number;
+  isPaused: boolean;
   onClean: () => void;
   onReset: () => void;
 }
 
-export default function Header({ day, currentGameTime, gameStartDate, cash, onClean, onReset }: HeaderProps) {
+export default function Header({ day, currentGameTime, gameStartDate, cash, isPaused, onClean, onReset }: HeaderProps) {
   const [showConfig, setShowConfig] = useState(false);
 
   return (
@@ -25,27 +27,28 @@ export default function Header({ day, currentGameTime, gameStartDate, cash, onCl
             <p className="text-blue-100 mt-1">Build your dental empire!</p>
           </div>
           <div className="flex items-center gap-4">
-            <div className="text-right">
-              <div className="text-lg font-semibold">Day {day}</div>
-              <div className="text-sm text-blue-200">{formatGameTime(currentGameTime)}</div>
+            <div className="min-w-[300px]">
+              <DayProgress day={day} currentGameTime={currentGameTime} />
             </div>
             <div className="flex items-center gap-2">
               <button 
                 onClick={onClean}
-                disabled={cash < GAME_CONFIG.HYGIENE_CLEANING_COST}
+                disabled={isPaused || cash < GAME_CONFIG.HYGIENE_CLEANING_COST}
                 className="px-4 py-2 bg-green-200 text-green-900 rounded-lg hover:bg-green-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 🧽 Clean ({formatCurrency(GAME_CONFIG.HYGIENE_CLEANING_COST)})
               </button>
               <button 
                 onClick={() => setShowConfig(!showConfig)}
-                className="px-4 py-2 bg-purple-200 text-purple-900 rounded-lg hover:bg-purple-300 transition-colors"
+                disabled={isPaused}
+                className="px-4 py-2 bg-purple-200 text-purple-900 rounded-lg hover:bg-purple-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 ⚙️ Config
               </button>
               <button 
                 onClick={onReset}
-                className="px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition-colors"
+                disabled={isPaused}
+                className="px-4 py-2 bg-gray-200 text-gray-900 rounded-lg hover:bg-gray-300 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Reset Game
               </button>

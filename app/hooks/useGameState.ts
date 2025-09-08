@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, getCurrentGameTime, getCurrentDay, isBusinessHours } from '../gameData';
+import { GameState, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, EVENTS, Event, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, isBusinessHours } from '../gameData';
 
 // Initial game state
 const initialState: GameState = {
@@ -44,12 +44,29 @@ const initialState: GameState = {
     totalRevenue: 0,
   },
   
+  // P&L Tracking
+  dailyPnL: [],
+  
   // Game Settings
   autoAssign: true,
   logs: ['Welcome! Your dental clinic is now open for business.'],
   
   // Achievements
   completedAchievements: [],
+  
+  // Events
+  activeEvent: null,
+  isPaused: false,
+  
+  // Daily P&L Tracking (reset each day)
+  dailyRevenue: 0,
+  dailyExpenses: 0,
+  dailyEventIncome: 0,
+  dailyEventExpenses: 0,
+  
+  // P&L Popup
+  showPnLPopup: false,
+  pnlPopupTimer: null,
 };
 
 export function useGameState() {
@@ -233,6 +250,7 @@ export function useGameState() {
           patientsServed: prev.stats.patientsServed + completedTreatments.length,
           totalRevenue: prev.stats.totalRevenue + completedTreatments.reduce((sum, t) => sum + t.revenue, 0),
         },
+        dailyRevenue: prev.dailyRevenue + completedTreatments.reduce((sum, t) => sum + t.revenue, 0),
         logs: newLogs.slice(0, 8),
       };
 
@@ -270,12 +288,12 @@ export function useGameState() {
 
   // Main game tick
   const gameTick = useCallback(() => {
-    if (!gameState.isRunning || gameState.isGameOver || gameState.isGameWon) return;
+    if (!gameState.isRunning || gameState.isGameOver || gameState.isGameWon || gameState.isPaused) return;
 
-    // Update game time and day progression
+    // Simple day progression - just increment day when duration passes
     setGameState(prev => {
-      const newGameTime = getCurrentGameTime(prev.gameStartDate);
-      const newDay = getCurrentDay(newGameTime);
+      const newGameTime = prev.currentGameTime + GAME_CONFIG.TICK_INTERVAL / 1000;
+      const newDay = Math.floor(newGameTime / GAME_CONFIG.DAY_DURATION) + 1;
       
       // Check if we've moved to a new day
       const dayChanged = newDay !== prev.day;
@@ -288,6 +306,23 @@ export function useGameState() {
         
         const newCash = Math.max(0, prev.cash - dailyCosts);
         
+        // Record daily P&L
+        const dailyPnLEntry = {
+          day: prev.day,
+          revenue: prev.dailyRevenue + prev.dailyEventIncome,
+          expenses: dailyCosts + prev.dailyEventExpenses + prev.dailyExpenses,
+          netProfit: prev.dailyRevenue + prev.dailyEventIncome - dailyCosts - prev.dailyEventExpenses - prev.dailyExpenses,
+          breakdown: {
+            patientRevenue: prev.dailyRevenue,
+            eventIncome: prev.dailyEventIncome,
+            rent: GAME_CONFIG.DAILY_RENT,
+            salaries: GAME_CONFIG.DAILY_SALARIES * prev.dentists,
+            utilities: GAME_CONFIG.DAILY_UTILITIES,
+            cleaning: prev.dailyExpenses,
+            eventExpenses: prev.dailyEventExpenses,
+          }
+        };
+        
         // Check for game over (bankruptcy)
         if (newCash === 0 && prev.cash > 0) {
           return {
@@ -297,17 +332,33 @@ export function useGameState() {
             cash: newCash,
             isGameOver: true,
             isRunning: false,
+            dailyPnL: [...prev.dailyPnL, dailyPnLEntry],
+            dailyRevenue: 0,
+            dailyExpenses: 0,
+            dailyEventIncome: 0,
+            dailyEventExpenses: 0,
             logs: [`💸 GAME OVER! You went bankrupt on Day ${newDay}!`, ...prev.logs.slice(0, 7)],
           };
         }
         
-        return {
+        const newState = {
           ...prev,
           day: newDay,
           currentGameTime: newGameTime,
           cash: newCash,
+          dailyPnL: [...prev.dailyPnL, dailyPnLEntry],
+          dailyRevenue: 0,
+          dailyExpenses: 0,
+          dailyEventIncome: 0,
+          dailyEventExpenses: 0,
+          showPnLPopup: true, // Show P&L popup for the completed day
+          isPaused: true, // Pause game during P&L popup
           logs: [`Day ${newDay} started! Daily costs: ${dailyCosts}`, ...prev.logs.slice(0, 7)],
         };
+
+        // Events will be checked during game tick, not at day start
+
+        return newState;
       }
 
       return {
@@ -317,8 +368,7 @@ export function useGameState() {
     });
 
     // Only spawn patients during business hours
-    const currentGameTime = getCurrentGameTime(gameState.gameStartDate);
-    if (isBusinessHours(currentGameTime)) {
+    if (isBusinessHours(gameState.currentGameTime)) {
       // Calculate arrival rate with marketing bonus
       const marketingBonus = gameState.upgradeLevels.marketing * 0.1; // 10% per level
       const arrivalRate = GAME_CONFIG.BASE_ARRIVAL_RATE + marketingBonus;
@@ -336,7 +386,21 @@ export function useGameState() {
 
     // Remove impatient patients (always available)
     removeImpatientPatients();
-  }, [gameState.isRunning, gameState.gameStartDate, spawnPatient, autoAssignPatients, updateTreatments, removeImpatientPatients]);
+
+    // Check for random events during the day (only if no active event and not paused)
+    if (!gameState.activeEvent && !gameState.isPaused && Math.random() < GAME_CONFIG.EVENT_CHANCE_PER_DAY / 20) { // Divide by 20 to make it less frequent per tick
+      const eventIds = Object.keys(EVENTS);
+      const randomEventId = eventIds[Math.floor(Math.random() * eventIds.length)];
+      const randomEvent = EVENTS[randomEventId as keyof typeof EVENTS];
+      
+      setGameState(prev => ({
+        ...prev,
+        activeEvent: randomEvent,
+        isPaused: true, // Pause the game when event appears
+        logs: [`📢 Event: ${randomEvent.title}`, ...prev.logs.slice(0, 7)],
+      }));
+    }
+  }, [gameState.isRunning, gameState.isPaused, gameState.gameStartDate, spawnPatient, autoAssignPatients, updateTreatments, removeImpatientPatients]);
 
   // Game loop
   useEffect(() => {
@@ -430,12 +494,86 @@ export function useGameState() {
         ...prev,
         cash: prev.cash - GAME_CONFIG.HYGIENE_CLEANING_COST,
         hygiene: clamp(prev.hygiene + GAME_CONFIG.HYGIENE_CLEANING_GAIN, 0, GAME_CONFIG.MAX_HYGIENE),
+        dailyExpenses: prev.dailyExpenses + GAME_CONFIG.HYGIENE_CLEANING_COST,
         logs: [`Clinic cleaned! +${GAME_CONFIG.HYGIENE_CLEANING_GAIN} hygiene`, ...prev.logs.slice(0, 7)],
       };
 
       return checkAchievements(newState);
     });
   }, [checkAchievements]);
+
+  // Handle event choice
+  const handleEventChoice = useCallback((choiceId: string) => {
+    setGameState(prev => {
+      if (!prev.activeEvent) return prev;
+
+
+      const choice = prev.activeEvent.choices.find(c => c.id === choiceId);
+      if (!choice) return prev;
+
+      // Check if player can afford the choice
+      if (choice.cost && prev.cash < choice.cost) {
+        return {
+          ...prev,
+          logs: ['Not enough cash for this choice!', ...prev.logs.slice(0, 7)],
+        };
+      }
+
+      // Deduct cost if any
+      let newCash = prev.cash;
+      if (choice.cost) {
+        newCash = prev.cash - choice.cost;
+      }
+
+      // Determine outcome based on probability
+      const random = Math.random() * 100;
+      let cumulativeProbability = 0;
+      let selectedOutcome = choice.outcomes[0]; // Default to first outcome
+
+      for (const outcome of choice.outcomes) {
+        cumulativeProbability += outcome.probability;
+        if (random <= cumulativeProbability) {
+          selectedOutcome = outcome;
+          break;
+        }
+      }
+
+      // Apply outcome effects
+      const finalCash = newCash + selectedOutcome.cashChange;
+      const newReputation = clamp(
+        prev.reputation + (selectedOutcome.reputationChange || 0),
+        GAME_CONFIG.MIN_REPUTATION,
+        GAME_CONFIG.MAX_REPUTATION
+      );
+      const newHygiene = clamp(
+        prev.hygiene + (selectedOutcome.hygieneChange || 0),
+        0,
+        GAME_CONFIG.MAX_HYGIENE
+      );
+
+      // Track event income/expenses
+      const eventIncome = selectedOutcome.cashChange > 0 ? selectedOutcome.cashChange : 0;
+      const eventExpenses = selectedOutcome.cashChange < 0 ? Math.abs(selectedOutcome.cashChange) : 0;
+      
+      // Also track the choice cost as event expense
+      const choiceCost = choice.cost || 0;
+
+      return {
+        ...prev,
+        cash: finalCash,
+        reputation: newReputation,
+        hygiene: newHygiene,
+        dailyEventIncome: prev.dailyEventIncome + eventIncome,
+        dailyEventExpenses: prev.dailyEventExpenses + eventExpenses + choiceCost,
+        activeEvent: null, // Close the event
+        isPaused: false, // Resume the game
+        logs: [
+          `Event Result: ${selectedOutcome.description}`,
+          ...prev.logs.slice(0, 7)
+        ],
+      };
+    });
+  }, []);
 
   // Reset game
   const resetGame = useCallback(() => {
@@ -445,10 +583,43 @@ export function useGameState() {
     });
   }, []);
 
+  // Close P&L popup
+  const closePnLPopup = useCallback(() => {
+    setGameState(prev => {
+      // Clear any existing timer
+      if (prev.pnlPopupTimer) {
+        clearTimeout(prev.pnlPopupTimer);
+      }
+      
+      return {
+        ...prev,
+        showPnLPopup: false,
+        isPaused: false, // Resume game
+        pnlPopupTimer: null,
+      };
+    });
+  }, []);
+
+  // Auto-close P&L popup after 5 seconds
+  useEffect(() => {
+    if (gameState.showPnLPopup && !gameState.pnlPopupTimer) {
+      const timer = setTimeout(() => {
+        closePnLPopup();
+      }, 5000); // 5 seconds
+      
+      setGameState(prev => ({
+        ...prev,
+        pnlPopupTimer: timer as any, // TypeScript workaround for timer ID
+      }));
+    }
+  }, [gameState.showPnLPopup, gameState.pnlPopupTimer, closePnLPopup]);
+
   return {
     gameState,
     buyUpgrade,
     cleanClinic,
     resetGame,
+    handleEventChoice,
+    closePnLPopup,
   };
 }
