@@ -58,10 +58,16 @@ export default function EventPopup({ event, onChoice }: EventPopupProps) {
             >
               <div className="flex justify-between items-center">
                 <span className="font-medium text-gray-800">{choice.text}</span>
-                {choice.cost && choice.cost > 0 && (
+                {(choice.cost ?? 0) > 0 && (
                   <span className="text-sm font-bold text-red-600">-${choice.cost}</span>
                 )}
               </div>
+              {/* Show consequence hint if available */}
+              {choice.consequenceHint && (
+                <div className="mt-2 text-xs text-gray-600 bg-gray-50 p-2 rounded border-l-2 border-blue-300">
+                  💡 {choice.consequenceHint}
+                </div>
+              )}
             </button>
           ))}
         </div>

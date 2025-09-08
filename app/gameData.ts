@@ -2,6 +2,18 @@
 // This makes it easy to modify game balance and add new features
 
 // === CORE GAME STATE ===
+export interface GameLog {
+  id: string;
+  type: 'treatment' | 'event' | 'upgrade' | 'cost' | 'achievement' | 'system';
+  message: string;
+  effects?: {
+    cash?: number;
+    reputation?: number;
+    hygiene?: number;
+  };
+  timestamp: number;
+}
+
 export interface GameState {
   // Core Resources
   cash: number;
@@ -61,7 +73,7 @@ export interface GameState {
   
   // Game Settings
   autoAssign: boolean;
-  logs: string[];
+  logs: GameLog[];
   
   // Achievements
   completedAchievements: string[];
@@ -125,6 +137,7 @@ export interface EventChoice {
   text: string;
   cost?: number; // Cost to take this choice (optional)
   outcomes: readonly EventOutcome[];
+  consequenceHint?: string; // Optional hint about what might happen
 }
 
 export interface EventOutcome {
@@ -357,248 +370,8 @@ export const PATIENT_NAMES = [
 export const HUMAN_EMOJIS = ['👨', '👩', '👦', '👧', '🧑', '👨‍🦱', '👩‍🦱', '👨‍🦰', '👩‍🦰'] as const;
 
 // === EVENTS ===
-export const EVENTS = {
-  'marketing-opportunity': {
-    id: 'marketing-opportunity',
-    title: 'Marketing Opportunity',
-    description: 'A local newspaper wants to feature your clinic in an article about dental health. This could bring in many new patients!',
-    type: 'opportunity' as const,
-    emoji: '📰',
-    choices: [
-      {
-        id: 'invest',
-        text: 'Invest $500 in professional photos and marketing materials',
-        cost: 500,
-        outcomes: [
-          {
-            probability: 70,
-            description: 'The article is a huge success! New patients flood in.',
-            cashChange: 1500,
-            reputationChange: 10
-          },
-          {
-            probability: 30,
-            description: 'The article doesn\'t get much attention. You lose your investment.',
-            cashChange: 0
-          }
-        ]
-      },
-      {
-        id: 'decline',
-        text: 'Decline the opportunity',
-        cost: 0,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'You miss out on potential new patients.',
-            cashChange: 0
-          }
-        ]
-      }
-    ]
-  },
-  'equipment-breakdown': {
-    id: 'equipment-breakdown',
-    title: 'Equipment Breakdown',
-    description: 'Your dental chair has broken down! You need to fix it immediately or lose patients.',
-    type: 'risk' as const,
-    emoji: '🔧',
-    choices: [
-      {
-        id: 'repair',
-        text: 'Pay $300 for immediate repair',
-        cost: 300,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'Equipment is fixed and working properly.',
-            cashChange: 0
-          }
-        ]
-      }
-    ]
-  },
-  'happy-customer': {
-    id: 'happy-customer',
-    title: 'Happy Customer',
-    description: 'A satisfied patient has left you a glowing review online!',
-    type: 'opportunity' as const,
-    emoji: '😊',
-    choices: [
-      {
-        id: 'thank',
-        text: 'Thank the patient and continue providing great service',
-        cost: 0,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'Your reputation improves from the positive review.',
-            cashChange: 0,
-            reputationChange: 5
-          }
-        ]
-      }
-    ]
-  },
-  'power-outage': {
-    id: 'power-outage',
-    title: 'Power Outage',
-    description: 'There\'s a power outage in your area! You can\'t treat patients until it\'s fixed.',
-    type: 'risk' as const,
-    emoji: '⚡',
-    choices: [
-      {
-        id: 'wait',
-        text: 'Wait for power to be restored (lose a day of business)',
-        cost: 0,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'You lose a day of revenue and some patients are frustrated.',
-            cashChange: -200,
-            reputationChange: -2
-          }
-        ]
-      },
-      {
-        id: 'generator',
-        text: 'Rent a generator for $400 to continue operations',
-        cost: 400,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'You continue operating and impress patients with your dedication.',
-            cashChange: 0,
-            reputationChange: 3
-          }
-        ]
-      }
-    ]
-  },
-  'lawsuit': {
-    id: 'lawsuit',
-    title: 'Legal Trouble',
-    description: 'A patient is threatening to sue over a treatment. You need to handle this carefully.',
-    type: 'risk' as const,
-    emoji: '⚖️',
-    choices: [
-      {
-        id: 'settle',
-        text: 'Pay $800 to settle out of court',
-        cost: 800,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'The case is settled quickly and quietly.',
-            cashChange: 0,
-            reputationChange: -1
-          }
-        ]
-      },
-      {
-        id: 'fight',
-        text: 'Fight the case in court (costs $300)',
-        cost: 300,
-        outcomes: [
-          {
-            probability: 60,
-            description: 'You win the case! Your reputation is protected.',
-            cashChange: 0,
-            reputationChange: 2
-          },
-          {
-            probability: 40,
-            description: 'You lose the case and must pay $1200 in damages.',
-            cashChange: -1200,
-            reputationChange: -5
-          }
-        ]
-      }
-    ]
-  },
-  'staff-strike': {
-    id: 'staff-strike',
-    title: 'Staff Strike',
-    description: 'Your dental assistants are demanding higher wages and threatening to strike!',
-    type: 'risk' as const,
-    emoji: '🚫',
-    choices: [
-      {
-        id: 'raise',
-        text: 'Give everyone a $50/day raise',
-        cost: 0,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'Staff is happy, but your daily costs increase permanently.',
-            cashChange: 0,
-            reputationChange: 3
-          }
-        ]
-      },
-      {
-        id: 'fire',
-        text: 'Fire the strikers and hire new staff',
-        cost: 200,
-        outcomes: [
-          {
-            probability: 70,
-            description: 'New staff is hired quickly and works well.',
-            cashChange: 0,
-            reputationChange: -2
-          },
-          {
-            probability: 30,
-            description: 'It takes time to find good replacements. You lose efficiency.',
-            cashChange: 0,
-            reputationChange: -4
-          }
-        ]
-      }
-    ]
-  },
-  'insurance-deal': {
-    id: 'insurance-deal',
-    title: 'Insurance Partnership',
-    description: 'A major insurance company wants to partner with your clinic for exclusive coverage.',
-    type: 'opportunity' as const,
-    emoji: '🏥',
-    choices: [
-      {
-        id: 'accept',
-        text: 'Accept the partnership (invest $1000 in equipment)',
-        cost: 1000,
-        outcomes: [
-          {
-            probability: 80,
-            description: 'Partnership is successful! You get many new patients.',
-            cashChange: 2000,
-            reputationChange: 8
-          },
-          {
-            probability: 20,
-            description: 'Partnership falls through. You lose your investment.',
-            cashChange: 0,
-            reputationChange: -2
-          }
-        ]
-      },
-      {
-        id: 'decline',
-        text: 'Decline the partnership',
-        cost: 0,
-        outcomes: [
-          {
-            probability: 100,
-            description: 'You maintain your independence but miss out on growth.',
-            cashChange: 0,
-            reputationChange: 0
-          }
-        ]
-      }
-    ]
-  }
-} as const;
+export { EVENTS } from './data/events';
+// removed inline EVENTS definition (now sourced from app/data/events)
 
 
 

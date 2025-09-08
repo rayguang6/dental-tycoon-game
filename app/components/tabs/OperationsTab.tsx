@@ -1,6 +1,6 @@
 'use client';
 
-import { Patient, Treatment } from '../../gameData';
+import { Patient, Treatment, GameLog } from '../../gameData';
 import PatientCard from '../game/PatientCard';
 import TreatmentChair from '../game/TreatmentChair';
 import EventLog from '../game/EventLog';
@@ -9,7 +9,7 @@ interface OperationsTabProps {
   patients: Patient[];
   treatments: Treatment[];
   chairs: number;
-  logs: string[];
+  logs: GameLog[];
 }
 
 export default function OperationsTab({ patients, treatments, chairs, logs }: OperationsTabProps) {

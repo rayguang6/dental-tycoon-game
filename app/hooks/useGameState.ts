@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { GameState, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, EVENTS, Event, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, isBusinessHours } from '../gameData';
+import { GameState, GameLog, Patient, Treatment, GAME_CONFIG, PATIENT_TYPES, UPGRADES, ACHIEVEMENTS, EVENTS, Event, generateId, clamp, getRandomPatientName, getRandomHumanEmoji, isBusinessHours } from '../gameData';
 
 // Initial game state
 const initialState: GameState = {
@@ -49,7 +49,12 @@ const initialState: GameState = {
   
   // Game Settings
   autoAssign: true,
-  logs: ['Welcome! Your dental clinic is now open for business.'],
+  logs: [{
+    id: 'welcome',
+    type: 'system',
+    message: 'Welcome! Your dental clinic is now open for business.',
+    timestamp: Date.now()
+  }],
   
   // Achievements
   completedAchievements: [],
@@ -115,7 +120,7 @@ export function useGameState() {
     setGameState(prev => ({
       ...prev,
       patients: [...prev.patients, createPatient()],
-      logs: [`New patient arrived!`, ...prev.logs.slice(0, 7)],
+      logs: [...prev.logs], // Remove patient arrival logs
     }));
   }, [createPatient]);
 
@@ -137,7 +142,7 @@ export function useGameState() {
         ...prev,
         patients: prev.patients.slice(1),
         treatments: [...prev.treatments, treatment],
-        logs: [`${patient.name} assigned to chair ${chairId + 1}`, ...prev.logs.slice(0, 7)],
+        logs: [...prev.logs], // Remove assignment logs
       };
     });
   }, [createTreatment]);
@@ -152,7 +157,7 @@ export function useGameState() {
         ...prevState,
         isGameWon: true,
         isRunning: false,
-        logs: [`🎉 VICTORY! You earned $100,000 and built a successful dental empire!`, ...prevState.logs.slice(0, 7)],
+        logs: [addLog('system', `🎉 VICTORY! You earned $100,000 and built a successful dental empire!`), ...prevState.logs.slice(0, 7)],
       };
     }
     
@@ -195,7 +200,7 @@ export function useGameState() {
         completedAchievements: [...prevState.completedAchievements, ...newAchievements],
         cash: prevState.cash + newAchievements.reduce((total, id) => total + ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS].reward, 0),
         logs: [
-          ...newAchievements.map(id => `🏆 Achievement Unlocked: ${ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS].title}! +$${ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS].reward}`),
+          ...newAchievements.map(id => addLog('achievement', `${ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS].title}!`, { cash: ACHIEVEMENTS[id as keyof typeof ACHIEVEMENTS].reward })),
           ...prevState.logs.slice(0, 7 - newAchievements.length)
         ],
       };
@@ -206,6 +211,18 @@ export function useGameState() {
     
     return checkWinCondition(prevState);
   }, [checkWinCondition]);
+
+  // Helper function to add logs
+  const addLog = useCallback((type: GameLog['type'], message: string, effects?: GameLog['effects']) => {
+    const log: GameLog = {
+      id: `${Date.now()}-${Math.random()}`,
+      type,
+      message,
+      effects,
+      timestamp: Date.now()
+    };
+    return log;
+  }, []);
 
   // Update treatment progress
   const updateTreatments = useCallback(() => {
@@ -236,7 +253,15 @@ export function useGameState() {
         newCash += treatment.revenue;
         newReputation = clamp(newReputation + 1, GAME_CONFIG.MIN_REPUTATION, GAME_CONFIG.MAX_REPUTATION);
         newHygiene = clamp(newHygiene - GAME_CONFIG.HYGIENE_LOSS_PER_TREATMENT, 0, GAME_CONFIG.MAX_HYGIENE); // More hygiene loss
-        newLogs.unshift(`Treated ${treatment.patientName} - Earned ${treatment.revenue}`);
+        // Get patient type info for better logging
+        const patientType = PATIENT_TYPES[treatment.type];
+        const serviceEmoji = patientType?.emoji || '🦷';
+        const serviceName = patientType?.name || treatment.type;
+        
+        newLogs.unshift(addLog('treatment', `${treatment.patientName} ${serviceEmoji} ${serviceName}`, {
+          cash: treatment.revenue,
+          reputation: 1
+        }));
       });
 
       const newState = {
@@ -281,7 +306,7 @@ export function useGameState() {
           ...prev.stats,
           patientsLost: prev.stats.patientsLost + lostPatients,
         },
-        logs: [`${lostPatients} patient(s) left due to long wait time`, ...prev.logs.slice(0, 7)],
+        logs: [addLog('system', `${lostPatients} patient(s) left due to long wait time`), ...prev.logs.slice(0, 7)],
       };
     });
   }, []);
@@ -337,7 +362,7 @@ export function useGameState() {
             dailyExpenses: 0,
             dailyEventIncome: 0,
             dailyEventExpenses: 0,
-            logs: [`💸 GAME OVER! You went bankrupt on Day ${newDay}!`, ...prev.logs.slice(0, 7)],
+            logs: [addLog('system', `💸 GAME OVER! You went bankrupt on Day ${newDay}!`), ...prev.logs.slice(0, 7)],
           };
         }
         
@@ -353,7 +378,7 @@ export function useGameState() {
           dailyEventExpenses: 0,
           showPnLPopup: true, // Show P&L popup for the completed day
           isPaused: true, // Pause game during P&L popup
-          logs: [`Day ${newDay} started! Daily costs: ${dailyCosts}`, ...prev.logs.slice(0, 7)],
+          logs: [addLog('system', `Day ${newDay} started! Daily costs: ${dailyCosts}`), ...prev.logs.slice(0, 7)],
         };
 
         // Events will be checked during game tick, not at day start
@@ -397,7 +422,7 @@ export function useGameState() {
         ...prev,
         activeEvent: randomEvent,
         isPaused: true, // Pause the game when event appears
-        logs: [`📢 Event: ${randomEvent.title}`, ...prev.logs.slice(0, 7)],
+        logs: [...prev.logs], // Remove simple event trigger logs
       }));
     }
   }, [gameState.isRunning, gameState.isPaused, gameState.gameStartDate, spawnPatient, autoAssignPatients, updateTreatments, removeImpatientPatients]);
@@ -415,7 +440,7 @@ export function useGameState() {
       if (prev.cash < cost) {
         return {
           ...prev,
-          logs: ['Not enough cash for this upgrade!', ...prev.logs.slice(0, 7)],
+          logs: [addLog('system', 'Not enough cash for this upgrade!'), ...prev.logs.slice(0, 7)],
         };
       }
 
@@ -425,7 +450,7 @@ export function useGameState() {
       if (currentLevel >= maxLevel) {
         return {
           ...prev,
-          logs: [`${upgradeId} is already at maximum level!`, ...prev.logs.slice(0, 7)],
+          logs: [addLog('system', `${upgradeId} is already at maximum level!`), ...prev.logs.slice(0, 7)],
         };
       }
 
@@ -441,7 +466,7 @@ export function useGameState() {
         ...prev,
         cash: prev.cash - cost,
         upgradeLevels: newUpgradeLevels,
-        logs: [`Purchased ${upgradeId} (Level ${newLevel}) for $${cost}`, ...prev.logs.slice(0, 7)],
+        logs: [addLog('upgrade', `Purchased ${upgradeId} (Level ${newLevel})`, { cash: -cost }), ...prev.logs.slice(0, 7)],
       };
 
       // Apply specific upgrade effects
@@ -486,7 +511,7 @@ export function useGameState() {
       if (prev.cash < GAME_CONFIG.HYGIENE_CLEANING_COST) {
         return {
           ...prev,
-          logs: ['Not enough cash to clean the clinic!', ...prev.logs.slice(0, 7)],
+          logs: [addLog('system', 'Not enough cash to clean the clinic!'), ...prev.logs.slice(0, 7)],
         };
       }
 
@@ -495,7 +520,7 @@ export function useGameState() {
         cash: prev.cash - GAME_CONFIG.HYGIENE_CLEANING_COST,
         hygiene: clamp(prev.hygiene + GAME_CONFIG.HYGIENE_CLEANING_GAIN, 0, GAME_CONFIG.MAX_HYGIENE),
         dailyExpenses: prev.dailyExpenses + GAME_CONFIG.HYGIENE_CLEANING_COST,
-        logs: [`Clinic cleaned! +${GAME_CONFIG.HYGIENE_CLEANING_GAIN} hygiene`, ...prev.logs.slice(0, 7)],
+        logs: [addLog('cost', `Clinic cleaned!`, { hygiene: GAME_CONFIG.HYGIENE_CLEANING_GAIN, cash: -GAME_CONFIG.HYGIENE_CLEANING_COST }), ...prev.logs.slice(0, 7)],
       };
 
       return checkAchievements(newState);
@@ -515,7 +540,7 @@ export function useGameState() {
       if (choice.cost && prev.cash < choice.cost) {
         return {
           ...prev,
-          logs: ['Not enough cash for this choice!', ...prev.logs.slice(0, 7)],
+          logs: [addLog('system', 'Not enough cash for this choice!'), ...prev.logs.slice(0, 7)],
         };
       }
 
@@ -568,8 +593,15 @@ export function useGameState() {
         activeEvent: null, // Close the event
         isPaused: false, // Resume the game
         logs: [
-          `Event Result: ${selectedOutcome.description}`,
-          ...prev.logs.slice(0, 7)
+          // Log the event outcome first
+          addLog('event', `${prev.activeEvent.title}: ${selectedOutcome.description}`, {
+            cash: selectedOutcome.cashChange,
+            reputation: selectedOutcome.reputationChange,
+            hygiene: selectedOutcome.hygieneChange
+          }),
+          // Log the decision cost after (so it appears above the outcome)
+          ...(choice.cost && choice.cost > 0 ? [addLog('cost', `Paid $${choice.cost} for ${choice.text}`, { cash: -choice.cost })] : []),
+          ...prev.logs.slice(0, 5)
         ],
       };
     });
