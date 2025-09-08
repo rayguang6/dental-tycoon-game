@@ -152,27 +152,27 @@ export interface EventOutcome {
 export const GAME_CONFIG = {
   // Game Timing (Faster for better gameplay)
   TICK_INTERVAL: 1000, // 1 second
-  DAY_DURATION: 20, // 20 seconds = 1 business day (balanced)
+  DAY_DURATION: 15, // 15 seconds = 1 business day (faster!)
   BUSINESS_HOURS_START: 9, // 9 AM
   BUSINESS_HOURS_END: 17, // 5 PM
   
   
-  // Starting Values
-  STARTING_CASH: 300, // Reduced starting cash for more challenge
+  // Starting Values (More challenging)
+  STARTING_CASH: 200, // Even less starting cash
   STARTING_REPUTATION: 0,
-  STARTING_HYGIENE: 70, // Lower starting hygiene
+  STARTING_HYGIENE: 60, // Lower starting hygiene
   STARTING_ENERGY: 100,
   STARTING_CHAIRS: 1,
   STARTING_DENTISTS: 1,
   STARTING_ASSISTANTS: 0,
   
-  // Patient Arrival (Balanced for gameplay)
-  BASE_ARRIVAL_RATE: 0.2, // 20% chance per second during business hours
+  // Patient Arrival (Balanced for faster gameplay)
+  BASE_ARRIVAL_RATE: 0.18, // 18% chance per second during business hours
   
-  // Daily Costs (More realistic business expenses)
-  DAILY_RENT: 80, // Higher rent
-  DAILY_SALARIES: 50, // Higher salaries per dentist/assistant
-  DAILY_UTILITIES: 20, // Basic utilities
+  // Daily Costs (Higher expenses for more challenge)
+  DAILY_RENT: 100, // Higher rent
+  DAILY_SALARIES: 60, // Higher salaries per dentist/assistant
+  DAILY_UTILITIES: 25, // Higher utilities
   
   // Hygiene System (More challenging)
   HYGIENE_LOSS_PER_TREATMENT: 5, // More hygiene loss
@@ -186,7 +186,7 @@ export const GAME_CONFIG = {
   MIN_REPUTATION: -50,
   
   // Events
-  EVENT_CHANCE_PER_DAY: 0.8, // 80% chance of an event each day (more frequent!)
+  EVENT_CHANCE_PER_DAY: 0.9, // 90% chance of an event each day (very frequent!)
 } as const;
 
 // === PATIENT TYPES ===
@@ -196,41 +196,41 @@ export const PATIENT_TYPES = {
   checkup: {
     name: 'Checkup',
     emoji: '🪥',
-    treatmentTime: 3,
+    treatmentTime: 2,
     revenue: 80,
-    patience: 8,
+    patience: 6,
     hygieneCost: 3
   },
   scaling: {
     name: 'Scaling',
     emoji: '🫧',
-    treatmentTime: 4,
+    treatmentTime: 3,
     revenue: 150,
-    patience: 10,
+    patience: 8,
     hygieneCost: 5
   },
   filling: {
     name: 'Filling',
     emoji: '🧱',
-    treatmentTime: 5,
+    treatmentTime: 4,
     revenue: 220,
-    patience: 12,
+    patience: 9,
     hygieneCost: 7
   },
   whitening: {
     name: 'Whitening',
     emoji: '✨',
-    treatmentTime: 6,
+    treatmentTime: 4,
     revenue: 300,
-    patience: 14,
+    patience: 10,
     hygieneCost: 8
   },
   braces: {
     name: 'Braces Consult',
     emoji: '😬',
-    treatmentTime: 4,
+    treatmentTime: 3,
     revenue: 180,
-    patience: 10,
+    patience: 8,
     hygieneCost: 4
   }
 } as const;

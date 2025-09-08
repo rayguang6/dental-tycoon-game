@@ -15,13 +15,13 @@ export const EVENTS = {
         cost: 400,
         outcomes: [
           {
-            probability: 60,
+            probability: 40,
             description: 'Great decision! You save money on supplies and operations run smoothly.',
             cashChange: 200,
             reputationChange: 1
           },
           {
-            probability: 40,
+            probability: 60,
             description: 'Supplies sit unused longer than expected. You break even.',
             cashChange: 0,
             reputationChange: 0
@@ -149,13 +149,13 @@ export const EVENTS = {
         cost: 200,
         outcomes: [
           {
-            probability: 70,
+            probability: 50,
             description: 'PR efforts help contain the damage. The review fades away quickly.',
             cashChange: 0,
             reputationChange: -3
           },
           {
-            probability: 30,
+            probability: 50,
             description: 'The review continues to spread despite PR efforts. Damage is worse than expected.',
             cashChange: 0,
             reputationChange: -8
@@ -168,16 +168,16 @@ export const EVENTS = {
         cost: 0,
         outcomes: [
           {
-            probability: 30,
+            probability: 20,
             description: 'The review fades away naturally. No lasting damage.',
             cashChange: 0,
             reputationChange: -2
           },
           {
-            probability: 70,
+            probability: 80,
             description: 'The review goes viral! Your reputation takes a massive hit.',
             cashChange: -400,
-            reputationChange: -15
+            reputationChange: -20
           }
         ]
       }
@@ -464,6 +464,167 @@ export const EVENTS = {
           {
             probability: 100,
             description: 'You maintain control but miss potential growth opportunities.',
+            cashChange: 0,
+            reputationChange: 0
+          }
+        ]
+      }
+    ]
+  },
+  'influencer-bad-review': {
+    id: 'influencer-bad-review',
+    title: 'Influencer Bad Review',
+    description: 'A popular health influencer visited your clinic and is threatening to post a scathing review about poor service. This could go viral and destroy your reputation!',
+    type: 'risk' as const,
+    emoji: '📱',
+    choices: [
+      {
+        id: 'pay-pr',
+        text: 'Hire PR firm to handle crisis ($500)',
+        cost: 500,
+        outcomes: [
+          {
+            probability: 80,
+            description: 'PR firm successfully manages the crisis. Reputation damage minimized.',
+            cashChange: -500,
+            reputationChange: -5
+          },
+          {
+            probability: 20,
+            description: 'PR firm fails. The bad review still goes viral.',
+            cashChange: -500,
+            reputationChange: -30
+          }
+        ]
+      },
+      {
+        id: 'ignore',
+        text: 'Ignore the threat',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 70,
+            description: 'The bad review goes viral! Your reputation is destroyed.',
+            cashChange: 0,
+            reputationChange: -40
+          },
+          {
+            probability: 30,
+            description: 'The influencer changes their mind and doesn\'t post the review.',
+            cashChange: 0,
+            reputationChange: 0
+          }
+        ]
+      }
+    ]
+  },
+  'critical-equipment-failure': {
+    id: 'critical-equipment-failure',
+    title: 'Critical Equipment Failure',
+    description: 'Your main dental chair has broken down completely. You need to either repair it immediately or buy new equipment.',
+    type: 'risk' as const,
+    emoji: '🔧',
+    choices: [
+      {
+        id: 'emergency-repair',
+        text: 'Emergency repair service ($300)',
+        cost: 300,
+        outcomes: [
+          {
+            probability: 60,
+            description: 'Repair successful. Equipment works like new.',
+            cashChange: -300,
+            reputationChange: 0
+          },
+          {
+            probability: 40,
+            description: 'Repair fails. You need to buy new equipment anyway.',
+            cashChange: -300,
+            reputationChange: -10
+          }
+        ]
+      },
+      {
+        id: 'buy-new',
+        text: 'Buy new equipment ($800)',
+        cost: 800,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'New equipment installed. Better efficiency and patient satisfaction.',
+            cashChange: -800,
+            reputationChange: 5
+          }
+        ]
+      },
+      {
+        id: 'wait',
+        text: 'Wait and see (lose 1 chair temporarily)',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'You lose a treatment chair for several days. Patients are frustrated.',
+            cashChange: 0,
+            reputationChange: -15
+          }
+        ]
+      }
+    ]
+  },
+  'lawsuit-threat': {
+    id: 'lawsuit-threat',
+    title: 'Malpractice Lawsuit Threat',
+    description: 'A former patient is threatening to sue for malpractice. You need to decide how to handle this serious situation.',
+    type: 'risk' as const,
+    emoji: '⚖️',
+    choices: [
+      {
+        id: 'settle',
+        text: 'Settle out of court ($1000)',
+        cost: 1000,
+        outcomes: [
+          {
+            probability: 100,
+            description: 'Settlement reached. Case closed but expensive.',
+            cashChange: -1000,
+            reputationChange: -5
+          }
+        ]
+      },
+      {
+        id: 'fight',
+        text: 'Fight in court ($200 legal fees)',
+        cost: 200,
+        outcomes: [
+          {
+            probability: 30,
+            description: 'You win the case! Your reputation is protected.',
+            cashChange: -200,
+            reputationChange: 5
+          },
+          {
+            probability: 70,
+            description: 'You lose the case. Massive settlement and reputation damage.',
+            cashChange: -2000,
+            reputationChange: -25
+          }
+        ]
+      },
+      {
+        id: 'ignore',
+        text: 'Ignore the threat',
+        cost: 0,
+        outcomes: [
+          {
+            probability: 80,
+            description: 'Lawsuit proceeds. You lose badly in court.',
+            cashChange: -1500,
+            reputationChange: -30
+          },
+          {
+            probability: 20,
+            description: 'The patient drops the case. You got lucky.',
             cashChange: 0,
             reputationChange: 0
           }
