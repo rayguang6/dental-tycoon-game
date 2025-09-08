@@ -147,17 +147,31 @@ export function useGameState() {
     });
   }, [createTreatment]);
 
+  // Check game over condition
+  const checkGameOver = useCallback((prevState: GameState) => {
+    if (prevState.cash < 0 || prevState.reputation < 0) {
+      const reason = prevState.cash < 0 ? 'bankruptcy' : 'reputation ruined';
+      return {
+        ...prevState,
+        isGameOver: true,
+        isRunning: false,
+        logs: [addLog('system', `💸 GAME OVER! You lost due to ${reason}!`), ...prevState.logs.slice(0, 7)],
+      };
+    }
+    return prevState;
+  }, []);
+
   // Check win condition
   const checkWinCondition = useCallback((prevState: GameState) => {
-    // Win condition: Reach $100,000 total revenue
-    const hasEnoughRevenue = prevState.stats.totalRevenue >= 100000;
+    // Win condition: Reach $100,000 cash
+    const hasEnoughCash = prevState.cash >= 100000;
     
-    if (hasEnoughRevenue && !prevState.isGameWon) {
+    if (hasEnoughCash && !prevState.isGameWon) {
       return {
         ...prevState,
         isGameWon: true,
         isRunning: false,
-        logs: [addLog('system', `🎉 VICTORY! You earned $100,000 and built a successful dental empire!`), ...prevState.logs.slice(0, 7)],
+        logs: [addLog('system', `🎉 VICTORY! You reached $100,000 and built a successful dental empire!`), ...prevState.logs.slice(0, 7)],
       };
     }
     
@@ -279,9 +293,9 @@ export function useGameState() {
         logs: newLogs.slice(0, 8),
       };
 
-      return checkAchievements(newState);
+      return checkGameOver(checkAchievements(newState));
     });
-  }, [checkAchievements]);
+  }, [checkAchievements, checkGameOver]);
 
   // Remove patients who lost patience
   const removeImpatientPatients = useCallback(() => {
@@ -348,23 +362,6 @@ export function useGameState() {
           }
         };
         
-        // Check for game over (bankruptcy)
-        if (newCash === 0 && prev.cash > 0) {
-          return {
-            ...prev,
-            day: newDay,
-            currentGameTime: newGameTime,
-            cash: newCash,
-            isGameOver: true,
-            isRunning: false,
-            dailyPnL: [...prev.dailyPnL, dailyPnLEntry],
-            dailyRevenue: 0,
-            dailyExpenses: 0,
-            dailyEventIncome: 0,
-            dailyEventExpenses: 0,
-            logs: [addLog('system', `💸 GAME OVER! You went bankrupt on Day ${newDay}!`), ...prev.logs.slice(0, 7)],
-          };
-        }
         
         const newState = {
           ...prev,
@@ -383,7 +380,7 @@ export function useGameState() {
 
         // Events will be checked during game tick, not at day start
 
-        return newState;
+        return checkGameOver(newState);
       }
 
       return {
@@ -501,9 +498,9 @@ export function useGameState() {
           break;
       }
 
-      return checkAchievements(updatedState);
+      return checkGameOver(checkAchievements(updatedState));
     });
-  }, [checkAchievements]);
+  }, [checkAchievements, checkGameOver]);
 
   // Clean clinic
   const cleanClinic = useCallback(() => {
@@ -523,9 +520,9 @@ export function useGameState() {
         logs: [addLog('cost', `Clinic cleaned!`, { hygiene: GAME_CONFIG.HYGIENE_CLEANING_GAIN, cash: -GAME_CONFIG.HYGIENE_CLEANING_COST }), ...prev.logs.slice(0, 7)],
       };
 
-      return checkAchievements(newState);
+      return checkGameOver(checkAchievements(newState));
     });
-  }, [checkAchievements]);
+  }, [checkAchievements, checkGameOver]);
 
   // Handle event choice
   const handleEventChoice = useCallback((choiceId: string) => {
@@ -536,13 +533,7 @@ export function useGameState() {
       const choice = prev.activeEvent.choices.find(c => c.id === choiceId);
       if (!choice) return prev;
 
-      // Check if player can afford the choice
-      if (choice.cost && prev.cash < choice.cost) {
-        return {
-          ...prev,
-          logs: [addLog('system', 'Not enough cash for this choice!'), ...prev.logs.slice(0, 7)],
-        };
-      }
+      // Allow choices even when bankrupt - let them trigger game over
 
       // Deduct cost if any
       let newCash = prev.cash;
@@ -583,7 +574,8 @@ export function useGameState() {
       // Also track the choice cost as event expense
       const choiceCost = choice.cost || 0;
 
-      return {
+      // Check for game over after event choice
+      return checkGameOver({
         ...prev,
         cash: finalCash,
         reputation: newReputation,
@@ -603,9 +595,9 @@ export function useGameState() {
           ...(choice.cost && choice.cost > 0 ? [addLog('cost', `Paid $${choice.cost} for ${choice.text}`, { cash: -choice.cost })] : []),
           ...prev.logs.slice(0, 5)
         ],
-      };
+      });
     });
-  }, []);
+  }, [checkGameOver]);
 
   // Reset game
   const resetGame = useCallback(() => {

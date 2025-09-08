@@ -57,8 +57,8 @@ export default function Home() {
 
         {/* Game Over Screen */}
         {gameState.isGameOver && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl pointer-events-auto">
               <div className="text-6xl mb-4">💸</div>
               <h2 className="text-2xl font-bold text-red-600 mb-4">Game Over!</h2>
               <p className="text-gray-600 mb-6">
@@ -77,8 +77,8 @@ export default function Home() {
 
         {/* Victory Screen */}
         {gameState.isGameWon && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl">
+          <div className="fixed inset-0 flex items-center justify-center z-50 pointer-events-none">
+            <div className="bg-white rounded-xl p-8 max-w-md mx-4 text-center shadow-2xl pointer-events-auto">
               <div className="text-6xl mb-4">🎉</div>
               <h2 className="text-2xl font-bold text-green-600 mb-4">Victory!</h2>
               <p className="text-gray-600 mb-6">
