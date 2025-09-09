@@ -150,9 +150,9 @@ export interface EventOutcome {
 
 // === GAME CONSTANTS ===
 export const GAME_CONFIG = {
-  // Game Timing (Faster for better gameplay)
+  // Game Timing (Balanced for meaningful gameplay)
   TICK_INTERVAL: 1000, // 1 second
-  DAY_DURATION: 15, // 15 seconds = 1 business day (faster!)
+  DAY_DURATION: 20, 
   BUSINESS_HOURS_START: 9, // 9 AM
   BUSINESS_HOURS_END: 17, // 5 PM
   
@@ -166,8 +166,8 @@ export const GAME_CONFIG = {
   STARTING_DENTISTS: 1,
   STARTING_ASSISTANTS: 0,
   
-  // Patient Arrival (Balanced for faster gameplay)
-  BASE_ARRIVAL_RATE: 0.18, // 18% chance per second during business hours
+  // Patient Arrival (Balanced for meaningful gameplay)
+  BASE_ARRIVAL_RATE: 0.20, // 20% chance per second during business hours (more patients, more pressure)
   
   // Daily Costs (Higher expenses for more challenge)
   DAILY_RENT: 100, // Higher rent
@@ -196,41 +196,41 @@ export const PATIENT_TYPES = {
   checkup: {
     name: 'Checkup',
     emoji: '🪥',
-    treatmentTime: 2,
+    treatmentTime: 4, // 4 seconds - quick checkup
     revenue: 80,
-    patience: 6,
+    patience: 8, // 8 seconds - less patience, more pressure
     hygieneCost: 3
   },
   scaling: {
     name: 'Scaling',
     emoji: '🫧',
-    treatmentTime: 3,
+    treatmentTime: 5, // 5 seconds - standard procedure
     revenue: 150,
-    patience: 8,
+    patience: 10, // 10 seconds - less patience for longer treatment
     hygieneCost: 5
   },
   filling: {
     name: 'Filling',
     emoji: '🧱',
-    treatmentTime: 4,
+    treatmentTime: 6, // 6 seconds - more complex procedure
     revenue: 220,
-    patience: 9,
+    patience: 12, // 12 seconds - less patience, more challenging
     hygieneCost: 7
   },
   whitening: {
     name: 'Whitening',
     emoji: '✨',
-    treatmentTime: 4,
+    treatmentTime: 7, // 7 seconds - longest treatment
     revenue: 300,
-    patience: 10,
+    patience: 14, // 14 seconds - premium service but still challenging
     hygieneCost: 8
   },
   braces: {
     name: 'Braces Consult',
     emoji: '😬',
-    treatmentTime: 3,
+    treatmentTime: 5, // 5 seconds - consultation time
     revenue: 180,
-    patience: 8,
+    patience: 9, // 9 seconds - less patience for consultation
     hygieneCost: 4
   }
 } as const;

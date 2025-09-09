@@ -486,13 +486,13 @@ export const EVENTS = {
           {
             probability: 80,
             description: 'PR firm successfully manages the crisis. Reputation damage minimized.',
-            cashChange: -500,
+            cashChange: 0,
             reputationChange: -5
           },
           {
             probability: 20,
             description: 'PR firm fails. The bad review still goes viral.',
-            cashChange: -500,
+            cashChange: 0,
             reputationChange: -30
           }
         ]
@@ -533,7 +533,7 @@ export const EVENTS = {
           {
             probability: 60,
             description: 'Repair successful. Equipment works like new.',
-            cashChange: -300,
+            cashChange: 0,
             reputationChange: 0
           },
           {
@@ -552,7 +552,7 @@ export const EVENTS = {
           {
             probability: 100,
             description: 'New equipment installed. Better efficiency and patient satisfaction.',
-            cashChange: -800,
+            cashChange: 0,
             reputationChange: 5
           }
         ]
@@ -587,7 +587,7 @@ export const EVENTS = {
           {
             probability: 100,
             description: 'Settlement reached. Case closed but expensive.',
-            cashChange: -1000,
+            cashChange: 0,
             reputationChange: -5
           }
         ]
@@ -600,13 +600,13 @@ export const EVENTS = {
           {
             probability: 30,
             description: 'You win the case! Your reputation is protected.',
-            cashChange: -200,
+            cashChange: 0,
             reputationChange: 5
           },
           {
             probability: 70,
             description: 'You lose the case. Massive settlement and reputation damage.',
-            cashChange: -2000,
+            cashChange: -1800,
             reputationChange: -25
           }
         ]
